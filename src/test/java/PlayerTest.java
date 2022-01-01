@@ -66,4 +66,34 @@ class PlayerTest {
     Assertions.assertEquals(1400, (int) scorePair.left);
     Assertions.assertEquals(6, (int) scorePair.right);
   }
+
+  @org.junit.jupiter.api.Test
+  void TestDecideScoreWithLessDice()
+  {
+    Player player = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 0, 0);
+    List<Integer> fiveDice = Arrays.asList(1,2,3,4,5);
+    List<Integer> fourDice = Arrays.asList(1,2,3,4);
+    List<Integer> threeDice = Arrays.asList(1,2,3);
+    List<Integer> twoDice = Arrays.asList(1,2);
+    List<Integer> oneDice = Arrays.asList(1);
+
+    ImmutablePair<Integer, Integer> scorePair;
+    scorePair = player.decideScore(fiveDice);
+    Assertions.assertEquals(scorePair.left, 150);
+    Assertions.assertEquals(scorePair.right, 3);
+    scorePair = player.decideScore(fourDice);
+    Assertions.assertEquals(scorePair.left, 100);
+    Assertions.assertEquals(scorePair.right, 3);
+    scorePair = player.decideScore(threeDice);
+    Assertions.assertEquals(scorePair.left, 100);
+    Assertions.assertEquals(scorePair.right, 2);
+    scorePair = player.decideScore(twoDice);
+    Assertions.assertEquals(scorePair.left, 100);
+    Assertions.assertEquals(scorePair.right, 1);
+    scorePair = player.decideScore(oneDice);
+    Assertions.assertEquals(scorePair.left, 100);
+    Assertions.assertEquals(scorePair.right, 6);
+
+
+  }
 }

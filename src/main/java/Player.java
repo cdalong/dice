@@ -33,11 +33,9 @@ public class Player {
   }
 
   public boolean checkStraight(HashMap<Integer, Integer> diceMap) {
-    LOGGER.info("Checking for straight");
     for (int value : diceMap.values()) {
       // everything needs to be one
       if (value > 1 || value == 0) {
-        LOGGER.info("Player has no Straight");
         return false;
       }
     }
@@ -92,8 +90,8 @@ public class Player {
             currentPendingScore += diceRoll * 100 * (2 * (curDiceVal - 3));
           }
           activeDice -= curDiceVal;
-          LOGGER.info("Player rolled a Multiple");
-          LOGGER.info(curDiceVal);
+          LOGGER.info("Player rolled a Multiple Of:");
+          LOGGER.info(diceRoll);
         }
         if (curDiceVal >= 3 && diceRoll == 1) {
           if (curDiceVal == 3) {
@@ -107,11 +105,9 @@ public class Player {
         } else if (diceRoll == 1 && curDiceVal <= 2) {
           currentPendingScore += curDiceVal * 100;
           activeDice -= curDiceVal;
-          LOGGER.info("Rolled a one");
         } else if (diceRoll == 5 && curDiceVal <= 2) {
           currentPendingScore += curDiceVal * 50;
           activeDice -= curDiceVal;
-          LOGGER.info("Rolled a five");
         }
         // should prioritize triples first, but requires some extra logic if there's only three twos
         // as usually players don't use 2's TODO
@@ -119,6 +115,7 @@ public class Player {
     }
 
     if (activeDice == 0) {
+      LOGGER.info("Player continues turn");
       activeDice = 6;
     }
     return new ImmutablePair<>(currentPendingScore, activeDice);
