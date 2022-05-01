@@ -49,6 +49,8 @@ public class Dice {
     cameron.setName("Cameron");
     Player fisk = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 200, 1);
     fisk.setName("Fisk");
+    fisk.setRemainingDiceThreshold(3);
+    cameron.setRemainingDiceThreshold(6);
     gamePlayers.add(cameron);
     gamePlayers.add(fisk);
     Player currentPlayer;

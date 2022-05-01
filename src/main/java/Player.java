@@ -59,6 +59,11 @@ public class Player {
     return map;
   }
 
+  public void calculatePlayerStatistics()
+  {
+
+  }
+
   public ImmutablePair<Integer, Integer> decideScore(List<Integer> rolledDice) {
 
     // based on player type
@@ -67,6 +72,10 @@ public class Player {
     // decide current score and remaining dice
     // if it's not open you have to keep rolling
     // player can bust if no one's, fives or three of a kinds are rolled
+    //The Player dice threshold should come into play here too
+    //What was the Roll threshold supposed to be? Score?
+
+
     int currentPendingScore = 0;
     int activeDice = rolledDice.size();
     HashMap<Integer, Integer> map;
@@ -111,6 +120,7 @@ public class Player {
         }
         // should prioritize triples first, but requires some extra logic if there's only three twos
         // as usually players don't use 2's TODO
+        //aggressive players should use the two's but conservative should not.
       }
     }
 
