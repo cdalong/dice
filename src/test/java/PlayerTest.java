@@ -1,5 +1,4 @@
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.Arrays;
@@ -75,7 +74,7 @@ class PlayerTest {
     List<Integer> fourDice = Arrays.asList(1,2,3,4);
     List<Integer> threeDice = Arrays.asList(1,2,3);
     List<Integer> twoDice = Arrays.asList(1,2);
-    List<Integer> oneDice = Arrays.asList(1);
+    List<Integer> oneDice = List.of(1);
 
     ImmutablePair<Integer, Integer> scorePair;
     scorePair = player.decideScore(fiveDice);
