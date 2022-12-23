@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-
 import model.GameMetadata;
 import player.Player;
 import player.PlayerType;
@@ -16,53 +15,73 @@ public class GameGenerator {
 
   private static final List<GameMetadata> listOfGamesPlayed = new ArrayList<>();
 
+  private static final int gamesPlayed = 1;
 
   public static void main(String[] args) {
 
-    for (int i = 0; i < 1000; i ++)
-    {
+    for (int i = 0; i < gamesPlayed; i++) {
 
-    List<Player> gamePlayers = new ArrayList<>();
-    Player cameron = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 500, 3);
-    cameron.setName("Cameron");
-    Player fisk = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 200, 1);
-    fisk.setName("Fisk");
-    gamePlayers.add(cameron);
-    gamePlayers.add(fisk);
+      List<Player> gamePlayers = new ArrayList<>();
+      Player cameron = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 500, 3);
+      cameron.setName("Fisk");
+      Player fisk = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 500, 3);
+      fisk.setName("Cameron");
+      gamePlayers.add(cameron);
+      gamePlayers.add(fisk);
 
-    Dice diceGame = new Dice(gamePlayers);
-    diceGame.playGame();
+      Dice diceGame = new Dice(gamePlayers);
+      diceGame.playGame();
 
-    GameMetadata metadata = diceGame.metadata;
+      GameMetadata metadata = diceGame.metadata;
       listOfGamesPlayed.add(metadata);
-
     }
     LOGGER.info("Games finished");
     calculateWinsByPlayer(listOfGamesPlayed);
+    calculateAveragePointsByGame(listOfGamesPlayed);
   }
 
-  private void calculateStats(){
+  public static void calculateAveragePointsByGame(List<GameMetadata> gameMetadata) {
+    HashMap<String, Integer> pointsByPlayer = HashMap.newHashMap(2);
 
+    for (GameMetadata individualGame : gameMetadata) {
 
+      for (Player player : individualGame.getPlayers()) {
+        if (pointsByPlayer.containsKey(player.name)) {
+
+          int averagePoints = pointsByPlayer.get(player.name);
+          averagePoints = averagePoints + player.getScore();
+          pointsByPlayer.put(player.name, averagePoints);
+        } else {
+          pointsByPlayer.put(player.name, player.getScore());
+        }
+      }
+    }
+
+    for (String playerName : pointsByPlayer.keySet()) {
+
+      int averagePoints = pointsByPlayer.get(playerName);
+      averagePoints = averagePoints / gamesPlayed;
+      pointsByPlayer.put(playerName, averagePoints);
+    }
+
+    LOGGER.info(Arrays.toString(pointsByPlayer.entrySet().toArray()));
   }
 
-  public static void calculateWinsByPlayer(List<GameMetadata> gameMetadata){
+  public static void calculateWinsByPlayer(List<GameMetadata> gameMetadata) {
 
     HashMap<String, Integer> winsByPlayer = HashMap.newHashMap(2);
 
     for (GameMetadata individualGame : gameMetadata) {
 
-      if (winsByPlayer.containsKey(individualGame.getWinningPlayer().name)){
+      if (winsByPlayer.containsKey(individualGame.getWinningPlayer().name)) {
 
-        //update wins
+        // update wins
         int wins = winsByPlayer.get(individualGame.getWinningPlayer().name);
-        wins ++;
+        wins++;
         winsByPlayer.put(individualGame.getWinningPlayer().name, wins);
-      }
-      else {
-        //first win
+      } else {
+        // first win
         winsByPlayer.put(individualGame.getWinningPlayer().name, 1);
-
       }
     }
     LOGGER.info(Arrays.toString(winsByPlayer.entrySet().toArray()));
