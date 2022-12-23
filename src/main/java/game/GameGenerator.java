@@ -1,6 +1,8 @@
 package game;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import model.GameMetadata;
@@ -17,7 +19,7 @@ public class GameGenerator {
 
   public static void main(String[] args) {
 
-    for (int i = 0; i < 200; i ++)
+    for (int i = 0; i < 1000; i ++)
     {
 
     List<Player> gamePlayers = new ArrayList<>();
@@ -36,6 +38,33 @@ public class GameGenerator {
 
     }
     LOGGER.info("Games finished");
+    calculateWinsByPlayer(listOfGamesPlayed);
   }
 
+  private void calculateStats(){
+
+
+  }
+
+  public static void calculateWinsByPlayer(List<GameMetadata> gameMetadata){
+
+    HashMap<String, Integer> winsByPlayer = HashMap.newHashMap(2);
+
+    for (GameMetadata individualGame : gameMetadata) {
+
+      if (winsByPlayer.containsKey(individualGame.getWinningPlayer().name)){
+
+        //update wins
+        int wins = winsByPlayer.get(individualGame.getWinningPlayer().name);
+        wins ++;
+        winsByPlayer.put(individualGame.getWinningPlayer().name, wins);
+      }
+      else {
+        //first win
+        winsByPlayer.put(individualGame.getWinningPlayer().name, 1);
+
+      }
+    }
+    LOGGER.info(Arrays.toString(winsByPlayer.entrySet().toArray()));
+  }
 }
