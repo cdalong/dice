@@ -1,3 +1,5 @@
+package player;
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 
@@ -40,7 +42,7 @@ public class Player {
       }
     }
 
-    LOGGER.info("Player has hit a straight");
+    LOGGER.info(String.format("Player %s has hit a straight", this.getName()));
     return true;
   }
 
@@ -90,8 +92,7 @@ public class Player {
             currentPendingScore += diceRoll * 100 * (2 * (curDiceVal - 3));
           }
           activeDice -= curDiceVal;
-          LOGGER.info("Player rolled a Multiple Of:");
-          LOGGER.info(diceRoll);
+          LOGGER.info(String.format("Player %s rolled a Multiple Of: %s", this.getName(), diceRoll));
         }
         if (curDiceVal >= 3 && diceRoll == 1) {
           if (curDiceVal == 3) {
@@ -100,9 +101,8 @@ public class Player {
             currentPendingScore += diceRoll * 1000 * (2 * (curDiceVal - 3));
           }
           activeDice -= curDiceVal;
-          LOGGER.info("Player rolled a Multiple of One");
-          LOGGER.info(curDiceVal);
-        } else if (diceRoll == 1 && curDiceVal <= 2) {
+          LOGGER.info(String.format("Player %s rolled a Multiple Of: %s", this.getName(), curDiceVal));
+        } else if (diceRoll == 1) {
           currentPendingScore += curDiceVal * 100;
           activeDice -= curDiceVal;
         } else if (diceRoll == 5 && curDiceVal <= 2) {
@@ -115,7 +115,7 @@ public class Player {
     }
 
     if (activeDice == 0) {
-      LOGGER.info("Player continues turn");
+      LOGGER.info(String.format("Player %s continues turn", this.getName()));
       activeDice = 6;
     }
     return new ImmutablePair<>(currentPendingScore, activeDice);

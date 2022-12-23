@@ -1,10 +1,12 @@
-import org.apache.commons.lang3.tuple.ImmutablePair;
+package game;
 
-import javax.swing.*;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import player.Player;
+import player.PlayerType;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class Dice {
 

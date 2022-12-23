@@ -1,5 +1,7 @@
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.Assertions;
+import player.Player;
+import player.PlayerType;
 
 import java.util.Arrays;
 import java.util.HashMap;
