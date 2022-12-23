@@ -15,7 +15,7 @@ public class GameGenerator {
 
   private static final List<GameMetadata> listOfGamesPlayed = new ArrayList<>();
 
-  private static final int gamesPlayed = 1000;
+  private static final int gamesPlayed = 1;
 
   public static void main(String[] args) {
 
@@ -23,9 +23,9 @@ public class GameGenerator {
 
       List<Player> gamePlayers = new ArrayList<>();
       Player cameron = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 500, 3);
-      cameron.setName("Cameron");
-      Player fisk = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 200, 1);
-      fisk.setName("Fisk");
+      cameron.setName("Fisk");
+      Player fisk = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 500, 3);
+      fisk.setName("Cameron");
       gamePlayers.add(cameron);
       gamePlayers.add(fisk);
 
@@ -37,10 +37,10 @@ public class GameGenerator {
     }
     LOGGER.info("Games finished");
     calculateWinsByPlayer(listOfGamesPlayed);
-    calculateAverageWinningPointsPerTurnByGame(listOfGamesPlayed);
+    calculateAveragePointsByGame(listOfGamesPlayed);
   }
 
-  public static void calculateAverageWinningPointsPerTurnByGame(List<GameMetadata> gameMetadata) {
+  public static void calculateAveragePointsByGame(List<GameMetadata> gameMetadata) {
     HashMap<String, Integer> pointsByPlayer = HashMap.newHashMap(2);
 
     for (GameMetadata individualGame : gameMetadata) {
@@ -48,13 +48,11 @@ public class GameGenerator {
       for (Player player : individualGame.getPlayers()) {
         if (pointsByPlayer.containsKey(player.name)) {
 
-          // update wins
           int averagePoints = pointsByPlayer.get(player.name);
-          averagePoints = averagePoints + player.calculateAverageTurnScore();
+          averagePoints = averagePoints + player.getScore();
           pointsByPlayer.put(player.name, averagePoints);
         } else {
-          // first win
-          pointsByPlayer.put(player.name, player.calculateAverageTurnScore());
+          pointsByPlayer.put(player.name, player.getScore());
         }
       }
     }

@@ -77,6 +77,7 @@ public class Dice {
         // player holds
         LOGGER.info(
             String.format("Player %s has held with %s", currentPlayer.name, gameState.left));
+        turnCounter++;
         if (currentPlayer.score + gameState.left > 10000) {
           LOGGER.info(String.format("Player %s has busted over 10000", currentPlayer.name));
           nextTurn();
@@ -86,6 +87,7 @@ public class Dice {
               String.format(
                   "Player %s has won, with average roll score of %s",
                   currentPlayer.name, currentPlayer.calculateAverageTurnScore()));
+          currentPlayer.score = 10000;
           someoneHasWon = true;
           metadata =
               GameMetadata.builder()
