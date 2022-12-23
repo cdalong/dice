@@ -117,8 +117,6 @@ public class Dice {
           nextTurn();
           turnCounter++;
         }
-        // TODO: next player continues if above threshold
-        continue;
       }
     }
   }
