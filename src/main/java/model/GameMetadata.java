@@ -8,5 +8,7 @@ import player.Player;
 @Builder
 public class GameMetadata {
     int totalTurns;
-    Player player;
+    Player winningPlayer;
+
+
 }

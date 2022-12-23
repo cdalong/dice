@@ -65,7 +65,7 @@ public class Dice {
 
       if (gameState.left == 0) {
         // busted
-        LOGGER.info(String.format("player.Player %s has busted with", currentPlayer.name));
+        LOGGER.info(String.format("Player %s has busted with", currentPlayer.name));
         nextTurn();
         turnCounter++;
         continue;
@@ -75,7 +75,7 @@ public class Dice {
           if (gameState.left == 0)
           {
             // busted
-            LOGGER.info(String.format("player.Player %s has held with %s", currentPlayer.name, runningScore));
+            LOGGER.info(String.format("Player %s has held with %s", currentPlayer.name, runningScore));
             nextTurn();
             turnCounter++;
             break;
@@ -83,7 +83,7 @@ public class Dice {
           runningScore += gameState.left;
           if (runningScore >= 1000) {
 
-            LOGGER.info(String.format("player.Player %s has opened with %s", currentPlayer.name, runningScore));
+            LOGGER.info(String.format("Player %s has opened with %s", currentPlayer.name, runningScore));
             currentPlayer.isOpen = true;
             nextTurn();
             turnCounter++;
@@ -96,23 +96,23 @@ public class Dice {
 
       else if (gameState.right <= currentPlayer.remainingDiceThreshold || currentPlayer.score > 8500) {
         // player holds
-        LOGGER.info(String.format("player.Player %s has held with %s", currentPlayer.name, gameState.left));
+        LOGGER.info(String.format("Player %s has held with %s", currentPlayer.name, gameState.left));
         if (currentPlayer.score + gameState.left > 10000)
         {
-          LOGGER.info(String.format("player.Player %s has busted over 10000", currentPlayer.name));
+          LOGGER.info(String.format("Player %s has busted over 10000", currentPlayer.name));
           nextTurn();
           turnCounter++;
         }
         else if (currentPlayer.score + gameState.left == 10000)
         {
-          LOGGER.info(String.format("player.Player %s has won", currentPlayer.name));
+          LOGGER.info(String.format("Player %s has won", currentPlayer.name));
           someoneHasWon = true;
           nextTurn();
           turnCounter++;
         }
         else if (currentPlayer.score + gameState.left < 10000) {
           currentPlayer.setScore(gameState.left + currentPlayer.getScore());
-          LOGGER.info(String.format("player.Player %s Score: %s", currentPlayer.name, currentPlayer.getScore()));
+          LOGGER.info(String.format("Player %s Score: %s", currentPlayer.name, currentPlayer.getScore()));
           nextTurn();
           turnCounter++;
         }
