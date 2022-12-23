@@ -16,6 +16,13 @@ public class Player {
   public int score;
   public String name;
   private static final Logger LOGGER = Logger.getLogger(Player.class.getName());
+  public int multiplesRolled;
+
+  public int straightsRolled;
+
+  public int averageRollScore;
+
+  public int turnNumber = 0;
 
   public Player(PlayerType.PLAYER_TYPE playerType, int rollThreshold, int remainingDiceThreshold) {
     this.playerType = playerType;
@@ -42,7 +49,8 @@ public class Player {
       }
     }
 
-    LOGGER.info(String.format("Player %s has hit a straight", this.getName()));
+    LOGGER.info(String.format("Player %s has hit a straight on turn number %s", this.getName(), this.turnNumber));
+    straightsRolled +=1;
     return true;
   }
 
@@ -93,6 +101,7 @@ public class Player {
           }
           activeDice -= curDiceVal;
           LOGGER.info(String.format("Player %s rolled a Multiple Of: %s", this.getName(), diceRoll));
+          multiplesRolled += 1;
         }
         if (curDiceVal >= 3 && diceRoll == 1) {
           if (curDiceVal == 3) {
@@ -102,6 +111,7 @@ public class Player {
           }
           activeDice -= curDiceVal;
           LOGGER.info(String.format("Player %s rolled a Multiple Of: %s", this.getName(), curDiceVal));
+          multiplesRolled += 1;
         } else if (diceRoll == 1) {
           currentPendingScore += curDiceVal * 100;
           activeDice -= curDiceVal;
@@ -119,6 +129,9 @@ public class Player {
       activeDice = 6;
     }
     return new ImmutablePair<>(currentPendingScore, activeDice);
+  }
+  public void incrementTurn(){
+    this.turnNumber += 1;
   }
 
   public boolean isOpen() {
@@ -160,6 +173,9 @@ public class Player {
     this.playerType = playerType;
   }
 
+  public int calculateAverageTurnScore(){
+    return score/turnNumber;
+  }
   public String getName() {
     return name;
   }

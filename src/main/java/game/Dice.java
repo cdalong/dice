@@ -59,6 +59,7 @@ public class Dice {
     while (!someoneHasWon) {
       int currentPlayerPosition = turnCounter % 2;
       currentPlayer = gamePlayers.get(currentPlayerPosition);
+      currentPlayer.incrementTurn();
       int runningScore = 0;
       diceList = currentPlayer.roll(activeDice);
       ImmutablePair<Integer, Integer> gameState = currentPlayer.decideScore(diceList);
@@ -105,7 +106,7 @@ public class Dice {
         }
         else if (currentPlayer.score + gameState.left == 10000)
         {
-          LOGGER.info(String.format("Player %s has won", currentPlayer.name));
+          LOGGER.info(String.format("Player %s has won, with average roll score of %s", currentPlayer.name, currentPlayer.calculateAverageTurnScore()));
           someoneHasWon = true;
           nextTurn();
           turnCounter++;
