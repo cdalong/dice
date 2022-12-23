@@ -1,23 +1,21 @@
 package model;
 
+import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import player.Player;
 import player.PlayerType;
 
-import java.util.List;
-
 @Data
 @Builder
 public class GameMetadata {
-    int totalTurns;
+  int totalTurns;
 
-    List<Player> players;
+  List<Player> players;
 
-    Player winningPlayer;
+  Player winningPlayer;
 
-    PlayerType winningPlayerType;
+  PlayerType winningPlayerType;
 
-    int winningPlayerAverageRollScore;
-
+  int winningPlayerAverageRollScore;
 }

@@ -1,11 +1,10 @@
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.Assertions;
 import player.Player;
 import player.PlayerType;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 
 class PlayerTest {
 
@@ -69,13 +68,12 @@ class PlayerTest {
   }
 
   @org.junit.jupiter.api.Test
-  void TestDecideScoreWithLessDice()
-  {
+  void TestDecideScoreWithLessDice() {
     Player player = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 0, 0);
-    List<Integer> fiveDice = Arrays.asList(1,2,3,4,5);
-    List<Integer> fourDice = Arrays.asList(1,2,3,4);
-    List<Integer> threeDice = Arrays.asList(1,2,3);
-    List<Integer> twoDice = Arrays.asList(1,2);
+    List<Integer> fiveDice = Arrays.asList(1, 2, 3, 4, 5);
+    List<Integer> fourDice = Arrays.asList(1, 2, 3, 4);
+    List<Integer> threeDice = Arrays.asList(1, 2, 3);
+    List<Integer> twoDice = Arrays.asList(1, 2);
     List<Integer> oneDice = List.of(1);
 
     ImmutablePair<Integer, Integer> scorePair;
@@ -94,7 +92,5 @@ class PlayerTest {
     scorePair = player.decideScore(oneDice);
     Assertions.assertEquals(scorePair.left, 100);
     Assertions.assertEquals(scorePair.right, 6);
-
-
   }
 }

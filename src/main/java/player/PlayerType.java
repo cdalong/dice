@@ -2,14 +2,10 @@ package player;
 
 public class PlayerType {
 
-    PlayerType()
-    {
+  PlayerType() {}
 
-    }
-    public enum PLAYER_TYPE
-    {
-        AGGRESSIVE,
-        SAFE
-    }
-    
+  public enum PLAYER_TYPE {
+    AGGRESSIVE,
+    SAFE
+  }
 }
