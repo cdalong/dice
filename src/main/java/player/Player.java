@@ -1,11 +1,10 @@
 package player;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.log4j.Logger;
 
 public class Player {
 
@@ -24,6 +23,8 @@ public class Player {
 
   public int turnNumber = 0;
 
+  public int timesBusted = 0;
+
   public Player(PlayerType.PLAYER_TYPE playerType, int rollThreshold, int remainingDiceThreshold) {
     this.playerType = playerType;
     this.rollThreshold = rollThreshold;
@@ -34,8 +35,7 @@ public class Player {
 
   public List<Integer> roll(int activeDice) {
     List<Integer> dice = new ArrayList<>();
-    for (int i = 0; i < activeDice; i++ )
-    {
+    for (int i = 0; i < activeDice; i++) {
       dice.add((int) (Math.random() * 6 + 1));
     }
     return dice;
@@ -49,8 +49,10 @@ public class Player {
       }
     }
 
-    LOGGER.info(String.format("Player %s has hit a straight on turn number %s", this.getName(), this.turnNumber));
-    straightsRolled +=1;
+    LOGGER.info(
+        String.format(
+            "Player %s has hit a straight on turn number %s", this.getName(), this.turnNumber));
+    straightsRolled += 1;
     return true;
   }
 
@@ -100,7 +102,8 @@ public class Player {
             currentPendingScore += diceRoll * 100 * (2 * (curDiceVal - 3));
           }
           activeDice -= curDiceVal;
-          LOGGER.info(String.format("Player %s rolled a Multiple Of: %s", this.getName(), diceRoll));
+          LOGGER.info(
+              String.format("Player %s rolled a Multiple Of: %s", this.getName(), diceRoll));
           multiplesRolled += 1;
         }
         if (curDiceVal >= 3 && diceRoll == 1) {
@@ -110,7 +113,8 @@ public class Player {
             currentPendingScore += diceRoll * 1000 * (2 * (curDiceVal - 3));
           }
           activeDice -= curDiceVal;
-          LOGGER.info(String.format("Player %s rolled a Multiple Of: %s", this.getName(), curDiceVal));
+          LOGGER.info(
+              String.format("Player %s rolled a Multiple Of: %s", this.getName(), curDiceVal));
           multiplesRolled += 1;
         } else if (diceRoll == 1) {
           currentPendingScore += curDiceVal * 100;
@@ -130,8 +134,13 @@ public class Player {
     }
     return new ImmutablePair<>(currentPendingScore, activeDice);
   }
-  public void incrementTurn(){
+
+  public void incrementTurn() {
     this.turnNumber += 1;
+  }
+
+  public void incrementTimesBusted() {
+    this.timesBusted += 1;
   }
 
   public boolean isOpen() {
@@ -165,6 +174,7 @@ public class Player {
   public void setScore(int score) {
     this.score = score;
   }
+
   public PlayerType.PLAYER_TYPE getPlayerType() {
     return playerType;
   }
@@ -173,9 +183,10 @@ public class Player {
     this.playerType = playerType;
   }
 
-  public int calculateAverageTurnScore(){
-    return score/turnNumber;
+  public int calculateAverageTurnScore() {
+    return score / turnNumber;
   }
+
   public String getName() {
     return name;
   }
@@ -183,5 +194,4 @@ public class Player {
   public void setName(String name) {
     this.name = name;
   }
-
 }
