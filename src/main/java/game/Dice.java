@@ -5,39 +5,37 @@ import java.util.List;
 import model.GameMetadata;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import player.Player;
-import player.PlayerType;
 
 public class Dice {
 
-  private List<Player> Players;
+  private final List<Player> players;
   private static int activeDice = 6;
   private static List<Integer> diceList;
   private static final org.apache.log4j.Logger LOGGER =
       org.apache.log4j.Logger.getLogger(Dice.class.getName());
 
-  public static List<GameMetadata> listOfPlayedGames = new ArrayList<>();
+  GameMetadata metadata;
+
+  public Dice(List<Player> players) {
+
+    this.players = players;
+  }
 
   private static void nextTurn() {
     activeDice = 6;
     diceList.clear();
   }
 
-  public static void main(String[] args) {
+  public void playGame() {
     boolean someoneHasWon = false;
     int turnCounter = 0;
-    List<Player> gamePlayers = new ArrayList<>();
-    Player cameron = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 500, 3);
-    cameron.setName("Cameron");
-    Player fisk = new Player(PlayerType.PLAYER_TYPE.AGGRESSIVE, 200, 1);
-    fisk.setName("Fisk");
-    gamePlayers.add(cameron);
-    gamePlayers.add(fisk);
+
     Player currentPlayer;
     diceList = new ArrayList<>();
     activeDice = 6;
     while (!someoneHasWon) {
       int currentPlayerPosition = turnCounter % 2;
-      currentPlayer = gamePlayers.get(currentPlayerPosition);
+      currentPlayer = players.get(currentPlayerPosition);
       currentPlayer.incrementTurn();
       int runningScore = 0;
       diceList = currentPlayer.roll(activeDice);
@@ -89,13 +87,13 @@ public class Dice {
                   "Player %s has won, with average roll score of %s",
                   currentPlayer.name, currentPlayer.calculateAverageTurnScore()));
           someoneHasWon = true;
-          listOfPlayedGames.add(
+          metadata =
               GameMetadata.builder()
-                  .players(gamePlayers)
+                  .players(players)
                   .winningPlayer(currentPlayer)
                   .totalTurns(turnCounter)
                   .winningPlayerAverageRollScore(currentPlayer.calculateAverageTurnScore())
-                  .build());
+                  .build();
           nextTurn();
           turnCounter++;
         } else if (currentPlayer.score + gameState.left < 10000) {
