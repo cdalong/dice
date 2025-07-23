@@ -123,8 +123,7 @@ public class Dice {
         }
       } else {
         // Player is open - now they can make strategic decisions
-        runningScore = 0;
-        boolean continueTurn = true;
+          boolean continueTurn = true;
 
         while (continueTurn) {
           runningScore += gameState.left;
@@ -136,7 +135,7 @@ public class Dice {
             // Player decides to hold
             LOGGER.info(String.format("Player %s has held with %s", currentPlayer.name, runningScore));
 
-            // Check for winning/busting conditions
+            // Check for winning/busting conditions first
             if (currentPlayer.score + runningScore > 10000) {
               LOGGER.info(String.format("Player %s has busted over 10000", currentPlayer.name));
 
@@ -163,58 +162,75 @@ public class Dice {
                       .winningPlayer(currentPlayer)
                       .totalTurns(turnCounter)
                       .winningPlayerAverageRollScore(currentPlayer.calculateAverageTurnScore())
+                      .highestTurnScore(highestTurnScore)
+                      .totalStealAttempts(players.stream().mapToInt(p -> p.stealAttempts).sum())
+                      .successfulSteals(players.stream().mapToInt(p -> p.successfulSteals).sum())
+                      .totalBusts(players.stream().mapToInt(p -> p.timesBusted).sum())
                       .build();
               nextTurn();
               turnCounter++;
               continueTurn = false;
             } else {
-              // Normal hold - add to score
-              currentPlayer.setScore(currentPlayer.getScore() + runningScore);
-              LOGGER.info(String.format("Player %s Score: %s", currentPlayer.name, currentPlayer.getScore()));
+              // Normal hold - but first check if opponent wants to steal!
 
-              // Record successful hold decision
-              currentPlayer.recordDecision(runningScore, gameState.right, true,
-                      runningScore, opponent.score, currentRoll);
+              // **THIS IS WHERE WE ADD THE STEALING LOGIC**
+              boolean opponentWantsToSteal = checkOpponentSteal(opponent, currentPlayer, runningScore);
 
-              nextTurn();
-              turnCounter++;
-              continueTurn = false;
-            }
-          } else {
-            // Player decides to continue rolling
-            // Record the decision to continue (only if they have remaining dice)
-            if (gameState.right > 0) {
-              currentPlayer.recordDecision(runningScore, gameState.right, false,
-                      gameState.left, opponent.score, currentRoll);
-            }
+              if (opponentWantsToSteal) {
+                LOGGER.info(String.format("Player %s attempts to steal %d points from %s",
+                        opponent.name, runningScore, currentPlayer.name));
 
-            if (gameState.right == 0) {
-              // Used all dice, automatically get 6 back (hot dice)
-              // KEEP the running score - don't reset it!
-              LOGGER.info(String.format("Player %s used all dice (hot dice), continuing with 6 dice and %d points",
-                      currentPlayer.name, runningScore));
-              activeDice = 6;
-              // Don't record a decision here - it's automatic
-              // runningScore stays the same - points accumulate!
-            } else {
-              activeDice = gameState.right;
-            }
+                int stealResult = attemptSteal(opponent, currentPlayer, runningScore, turnCounter);
 
-            currentRoll = currentPlayer.roll(activeDice);
-            gameState = currentPlayer.decideScore(currentRoll);
+                if (stealResult > 0) {
+                  // Successful steal!
+                  LOGGER.info(String.format("Player %s successfully stole with %d points (beat %d)",
+                          opponent.name, stealResult, runningScore));
 
-            if (gameState.left == 0) {
-              // Busted while continuing
-              LOGGER.info(String.format("Player %s has busted", currentPlayer.name));
-              currentPlayer.incrementTimesBusted();
+                  // Give points to the stealing player
+                  opponent.setScore(opponent.getScore() + stealResult);
+                  LOGGER.info(String.format("Player %s Score after steal: %s", opponent.name, opponent.getScore()));
 
-              // Record the bust decision
-              currentPlayer.recordDecision(runningScore, activeDice, false,
-                      -runningScore, opponent.score, currentRoll);
+                  // Original player gets nothing this turn
+                  LOGGER.info(String.format("Player %s lost their turn due to steal", currentPlayer.name));
 
-              nextTurn();
-              turnCounter++;
-              continueTurn = false;
+                  // Record the steal attempt success for the stealing player (already done in attemptSteal)
+                  // Record the loss for the original player
+                  currentPlayer.recordDecision(runningScore, gameState.right, true,
+                          0, opponent.score, currentRoll); // 0 because they lost the points to steal
+
+                } else {
+                  // Failed steal - original player keeps their points
+                  LOGGER.info(String.format("Player %s failed to steal, %s keeps %d points",
+                          opponent.name, currentPlayer.name, runningScore));
+
+                  // Original player gets their points as normal
+                  currentPlayer.setScore(currentPlayer.getScore() + runningScore);
+                  LOGGER.info(String.format("Player %s Score: %s", currentPlayer.name, currentPlayer.getScore()));
+
+                  // Record successful hold decision for original player
+                  currentPlayer.recordDecision(runningScore, gameState.right, true,
+                          runningScore, opponent.score, currentRoll);
+
+                  // Stealing player's failure is already recorded in attemptSteal method
+
+                }
+                  nextTurn();
+                  turnCounter++;
+                  continueTurn = false;
+              } else {
+                // No steal attempt - normal hold
+                currentPlayer.setScore(currentPlayer.getScore() + runningScore);
+                LOGGER.info(String.format("Player %s Score: %s", currentPlayer.name, currentPlayer.getScore()));
+
+                // Record successful hold decision
+                currentPlayer.recordDecision(runningScore, gameState.right, true,
+                        runningScore, opponent.score, currentRoll);
+
+                nextTurn();
+                turnCounter++;
+                continueTurn = false;
+              }
             }
           }
         }

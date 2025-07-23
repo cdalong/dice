@@ -18,7 +18,7 @@ public class GameGenerator {
 
   private static final List<GameMetadata> listOfGamesPlayed = new ArrayList<>();
 
-  private static final int gamesPlayed = 10000; // Increased for ML training
+  private static final int gamesPlayed = 10; // Increased for ML training
 
   public static void main(String[] args) {
     LOGGER.info("Starting Farkle simulation with " + gamesPlayed + " games");
