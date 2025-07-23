@@ -1,6 +1,7 @@
 package game;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +10,6 @@ import model.DecisionPoint;
 import model.GameMetadata;
 import player.Player;
 import player.PlayerType;
-
 
 public class GameGenerator {
 
@@ -271,7 +271,17 @@ public class GameGenerator {
         player.timesBusted = 0;
         player.multiplesRolled = 0;
         player.straightsRolled = 0;
+        player.stealAttempts = 0;
+        player.successfulSteals = 0;
+        player.highestSingleTurn = 0;
         player.decisionHistory.clear();
+
+        // Reset performance metrics
+        player.totalPointsFromHolding = 0;
+        player.totalPointsFromContinuing = 0;
+        player.timesHeldAndSucceeded = 0;
+        player.timesContinuedAndBusted = 0;
+        player.timesContinuedAndSucceeded = 0;
       }
 
       Dice diceGame = new Dice(new ArrayList<>(players));

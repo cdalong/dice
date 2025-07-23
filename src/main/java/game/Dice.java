@@ -224,32 +224,43 @@ public class Dice {
 
   // Check if opponent wants to attempt to steal the turn
   private boolean checkOpponentSteal(Player opponent, Player currentPlayer, int heldScore) {
+    LOGGER.info(String.format("Checking if %s wants to steal %d points from %s",
+            opponent.name, heldScore, currentPlayer.name));
+
     // Simple AI decision: steal if held score is high enough and we're behind
     if (!opponent.isOpen) {
+      LOGGER.info(String.format("%s not open, cannot steal", opponent.name));
       return false; // Can't steal if not opened
     }
 
-    int scoreGap = currentPlayer.score - opponent.score;
+    int scoreGap = currentPlayer.score + heldScore - opponent.score; // Gap after the hold
+
+    LOGGER.info(String.format("Score gap after hold would be: %d (current player would have %d, opponent has %d)",
+            scoreGap, currentPlayer.score + heldScore, opponent.score));
 
     // More likely to steal if:
-    // 1. We're behind
-    // 2. The held score is substantial (>= 300 points)
-    // 3. Opponent's strategy (aggressive players more likely to steal)
+    // 1. The held score is substantial (>= 250 points)
+    // 2. We're significantly behind or the game is close
 
-    if (heldScore < 300) {
-      return false; // Not worth the risk
-    }
-
-    if (scoreGap <= 0) {
-      return false; // We're not behind
+    if (heldScore < 250) {
+      LOGGER.info(String.format("Held score %d too low to steal", heldScore));
+      return false; // Not worth the risk for small scores
     }
 
     // Aggressive players more likely to steal
-    if (opponent.playerType == PlayerType.PLAYER_TYPE.AGGRESSIVE) {
-      return heldScore >= 400 && scoreGap > 1000;
-    } else {
-      return heldScore >= 600 && scoreGap > 2000;
-    }
+      boolean shouldSteal;
+      if (opponent.playerType == PlayerType.PLAYER_TYPE.AGGRESSIVE) {
+      // Steal if held score >= 300 or if we're behind by 500+
+          shouldSteal = heldScore >= 300 || scoreGap >= 500;
+      LOGGER.info(String.format("AGGRESSIVE player decision: heldScore=%d (>=300?), scoreGap=%d (>=500?) -> %b",
+              heldScore, scoreGap, shouldSteal));
+      } else {
+      // Safe players only steal for big scores or when far behind
+          shouldSteal = heldScore >= 500 || scoreGap >= 1500;
+      LOGGER.info(String.format("SAFE player decision: heldScore=%d (>=500?), scoreGap=%d (>=1500?) -> %b",
+              heldScore, scoreGap, shouldSteal));
+      }
+      return shouldSteal;
   }
 
   // Attempt to steal the opponent's held turn
@@ -257,11 +268,13 @@ public class Dice {
     LOGGER.info(String.format("Player %s attempts to steal %d points from %s",
             stealingPlayer.name, targetScore, originalPlayer.name));
 
+    stealingPlayer.stealAttempts++; // Track steal attempts
+
     int stealRunningScore = 0;
     int stealActiveDice = 6;
     boolean stealContinue = true;
 
-    while (stealContinue && stealRunningScore < targetScore) {
+    while (stealContinue && stealRunningScore <= targetScore) {
       List<Integer> stealRoll = stealingPlayer.roll(stealActiveDice);
       ImmutablePair<Integer, Integer> stealResult = stealingPlayer.decideScore(stealRoll);
 
@@ -283,6 +296,8 @@ public class Dice {
         LOGGER.info(String.format("Player %s successfully stole with %d points (target was %d)",
                 stealingPlayer.name, stealRunningScore, targetScore));
 
+        stealingPlayer.successfulSteals++; // Track successful steals
+
         // Track highest turn score
         if (stealRunningScore > highestTurnScore) {
           highestTurnScore = stealRunningScore;
@@ -297,7 +312,18 @@ public class Dice {
       }
 
       // Decide whether to continue the steal attempt
-      boolean shouldContinueSteal = stealingPlayer.shouldHold(stealRunningScore, stealResult.right, originalPlayer.score);
+      // For steals, be more aggressive since we need to beat the target
+      boolean shouldContinueSteal = false;
+      if (stealResult.right <= 2) {
+        // Too risky with 1-2 dice
+        shouldContinueSteal = true; // Stop stealing
+      } else if (stealRunningScore < targetScore / 2) {
+        // Not even halfway to target, keep going
+        shouldContinueSteal = false; // Continue stealing
+      } else {
+        // Use normal strategy
+        shouldContinueSteal = stealingPlayer.shouldHold(stealRunningScore, stealResult.right, originalPlayer.score);
+      }
 
       if (shouldContinueSteal) {
         // Give up on steal - not enough points

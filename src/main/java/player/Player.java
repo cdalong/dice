@@ -122,9 +122,9 @@ public class Player {
           activeDice -= curDiceVal;
           LOGGER.info(
                   String.format("Player %s rolled a Multiple Of: %s", this.getName(), diceRoll));
-          multiplesRolled += 1;
+          multiplesRolled += 1; // Only increment once per multiple type
         }
-        if (curDiceVal >= 3 && diceRoll == 1) {
+        else if (curDiceVal >= 3) {
           if (curDiceVal == 3) {
             currentPendingScore += diceRoll * 1000;
           } else {
@@ -132,12 +132,12 @@ public class Player {
           }
           activeDice -= curDiceVal;
           LOGGER.info(
-                  String.format("Player %s rolled a Multiple Of: %s", this.getName(), curDiceVal));
-          multiplesRolled += 1;
+                  String.format("Player %s rolled a Multiple Of %d ones", this.getName(), curDiceVal));
+          multiplesRolled += 1; // Only increment once per multiple type
         } else if (diceRoll == 1) {
           currentPendingScore += curDiceVal * 100;
           activeDice -= curDiceVal;
-        } else if (diceRoll == 5 && curDiceVal <= 2) {
+        } else if (diceRoll == 5) {
           currentPendingScore += curDiceVal * 50;
           activeDice -= curDiceVal;
         }
