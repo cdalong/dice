@@ -11,7 +11,7 @@ public class Dice {
   private final List<Player> players;
   private static int activeDice = 6;
   private static List<Integer> diceList;
-  private static final org.apache.log4j.Logger LOGGER =
+  static final org.apache.log4j.Logger LOGGER =
       org.apache.log4j.Logger.getLogger(Dice.class.getName());
 
   GameMetadata metadata;

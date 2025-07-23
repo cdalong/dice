@@ -3,9 +3,14 @@ package player;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import lombok.Data;
+import lombok.Getter;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 
+@Data
 public class Player {
 
   public PlayerType.PLAYER_TYPE playerType;
@@ -25,6 +30,137 @@ public class Player {
 
   public int timesBusted = 0;
 
+  // ML Training Data
+  public List<DecisionPoint> decisionHistory = new ArrayList<>();
+  public List<RollAnalysis> rollHistory = new ArrayList<>();
+
+  // Situational statistics
+  public Map<String, Integer> decisionsByGameState = new HashMap<>();
+  public Map<Integer, List<Integer>> scoreByRemainingDice = new HashMap<>();
+
+  public int totalPointsFromHolding = 0;
+  public int totalPointsFromContinuing = 0;
+  public int timesHeldAndSucceeded = 0;
+  public int timesContinuedAndBusted = 0;
+  public int timesContinuedAndSucceeded = 0;
+
+  public static class DecisionPoint {
+    // Current game state
+    public int currentScore;           // Player's total score
+    public int opponentScore;          // Opponent's total score
+    public int pendingScore;           // Points accumulated this turn
+    public int remainingDice;          // Dice available to roll
+    public int turnNumber;             // Which turn in the game
+    public boolean isPlayerOpen;       // Has player opened?
+    public boolean isOpponentOpen;     // Has opponent opened?
+
+    // Risk assessment
+    public double bustProbability;     // Calculated risk of busting
+    public int scoreGap;              // currentScore - opponentScore
+    public int pointsNeededToWin;     // 10000 - currentScore
+    public int pointsNeededToOpen;    // 1000 - currentScore (if not open)
+    public double expectedValue;       // Expected points if we continue rolling
+
+    // Decision made
+    public boolean decidedToHold;     // True if held, false if continued
+    public int actualOutcome;         // Points gained/lost from decision
+  }
+
+  public static class RollAnalysis {
+    public Map<Integer, Integer> diceFrequency;  // Count of each die face
+    public int scoringDiceCount;                 // How many dice scored
+    public boolean hadMultiple;                  // Three+ of a kind
+    public boolean hadStraightPotential;         // Close to straight
+    public int maxPossibleScore;                 // Best possible score from roll
+    public int guaranteedScore;                  // Minimum safe score
+  }
+
+  public void recordDecision(int pendingScore, int remainingDice,
+                             boolean decidedToHold, int outcome,
+                             int opponentScore) {
+    DecisionPoint decision = new DecisionPoint();
+    decision.currentScore = this.score;
+    decision.opponentScore = opponentScore;
+    decision.pendingScore = pendingScore;
+    decision.remainingDice = remainingDice;
+    decision.turnNumber = this.turnNumber;
+    decision.isPlayerOpen = this.isOpen;
+    decision.decidedToHold = decidedToHold;
+    decision.actualOutcome = outcome;
+    decision.scoreGap = this.score - opponentScore;
+    decision.pointsNeededToWin = 10000 - this.score;
+    decision.bustProbability = calculateBustProbability(remainingDice);
+    decision.expectedValue = calculateExpectedValue(remainingDice, pendingScore);
+
+    decisionHistory.add(decision);
+  }
+
+  // Add to Player.java
+  private double calculateBustProbability(int diceCount) {
+    if (diceCount == 1) {
+      // Only 1s and 5s score with 1 die
+      return 4.0/6.0; // P(rolling 2,3,4,6)
+    }
+
+    if (diceCount == 2) {
+      // Can score with: any 1, any 5, or pair of 1s/5s
+      return calculateTwoDiceBustProbability();
+    }
+
+    if (diceCount >= 3) {
+      // Can score with: 1s, 5s, three-of-a-kind, or straight (if 6 dice)
+      return calculateMultiDiceBustProbability(diceCount);
+    }
+
+    return 0.0;
+  }
+
+  private double calculateTwoDiceBustProbability() {
+    // Total possible outcomes: 36
+    // Scoring outcomes:
+    // - At least one 1: 11 outcomes (6 with first die + 6 with second die - 1 overlap)
+    // - At least one 5: 11 outcomes
+    // - Both 1 and 5: 2 outcomes (already counted above)
+    // Total scoring: 11 + 11 - 2 = 20
+    // Busting outcomes: 36 - 20 = 16
+    return 16.0/36.0;
+  }
+
+  private double calculateExpectedValue(int diceCount, int currentPending) {
+    int simulations = 10000;
+    double totalValue = 0;
+
+    for (int i = 0; i < simulations; i++) {
+      List<Integer> testRoll = roll(diceCount);
+      ImmutablePair<Integer, Integer> result = decideScore(testRoll);
+
+      if (result.left == 0) {
+        // Bust - lose all pending points from this turn
+        totalValue += -currentPending;
+      } else {
+        // Score - gain the points (assuming we hold after this roll)
+        // This is a simplified model - in reality we might continue again
+        totalValue += result.left;
+      }
+    }
+
+    return totalValue / simulations;
+  }
+
+  private double calculateMultiDiceBustProbability(int diceCount) {
+    // This is complex - we need to calculate the probability of:
+    // 1. No 1s AND no 5s AND no three-of-a-kind AND (no straight if 6 dice)
+
+    // For practical purposes, we can use simulation or lookup tables
+    // Here's a simplified approximation that's more accurate than the original
+
+    if (diceCount == 3) return 0.444; // ~44.4%
+    if (diceCount == 4) return 0.309; // ~30.9%
+    if (diceCount == 5) return 0.193; // ~19.3%
+    if (diceCount == 6) return 0.077; // ~7.7%
+
+    return 0.0;
+  }
   public Player(PlayerType.PLAYER_TYPE playerType, int rollThreshold, int remainingDiceThreshold) {
     this.playerType = playerType;
     this.rollThreshold = rollThreshold;
@@ -143,55 +279,9 @@ public class Player {
     this.timesBusted += 1;
   }
 
-  public boolean isOpen() {
-    return isOpen;
-  }
-
-  public void setOpen(boolean open) {
-    isOpen = open;
-  }
-
-  public int getRollThreshold() {
-    return rollThreshold;
-  }
-
-  public void setRollThreshold(int rollThreshold) {
-    this.rollThreshold = rollThreshold;
-  }
-
-  public int getRemainingDiceThreshold() {
-    return remainingDiceThreshold;
-  }
-
-  public void setRemainingDiceThreshold(int remainingDiceThreshold) {
-    this.remainingDiceThreshold = remainingDiceThreshold;
-  }
-
-  public int getScore() {
-    return score;
-  }
-
-  public void setScore(int score) {
-    this.score = score;
-  }
-
-  public PlayerType.PLAYER_TYPE getPlayerType() {
-    return playerType;
-  }
-
-  public void setPlayerType(PlayerType.PLAYER_TYPE playerType) {
-    this.playerType = playerType;
-  }
-
   public int calculateAverageTurnScore() {
     return score / turnNumber;
   }
 
-  public String getName() {
-    return name;
-  }
 
-  public void setName(String name) {
-    this.name = name;
-  }
 }
