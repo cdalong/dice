@@ -1,4 +1,4 @@
-package game;// src/main/java/analytics/MLDataCollector.java
+package game;
 
 import java.io.FileWriter;
 import java.io.PrintWriter;
@@ -6,8 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import game.DecisionStats;
 import model.GameMetadata;
+import model.DecisionPoint;
 import player.Player;
 
 public class MLDataCollector {
@@ -21,11 +21,12 @@ public class MLDataCollector {
                     "turnNumber,isOpen,scoreGap,pointsNeededToWin," +
                     "bustProbability,expectedValue,decidedToHold,outcome,won");
 
+            int totalDecisions = 0;
             for (GameMetadata game : games) {
                 for (Player player : game.getPlayers()) {
                     boolean playerWon = player.equals(game.getWinningPlayer());
 
-                    for (Player.DecisionPoint decision : player.decisionHistory) {
+                    for (DecisionPoint decision : player.decisionHistory) {
                         writer.printf("%d,%d,%d,%d,%d,%b,%d,%d,%.3f,%.1f,%b,%d,%b%n",
                                 decision.currentScore,
                                 decision.opponentScore,
@@ -41,10 +42,11 @@ public class MLDataCollector {
                                 decision.actualOutcome,
                                 playerWon
                         );
+                        totalDecisions++;
                     }
                 }
             }
-            LOGGER.info("Training data exported to " + filename);
+            LOGGER.info("Training data exported to " + filename + " with " + totalDecisions + " decisions");
         } catch (Exception e) {
             LOGGER.error("Failed to export training data", e);
         }
@@ -52,10 +54,12 @@ public class MLDataCollector {
 
     public static void analyzeOptimalDecisions(List<GameMetadata> games) {
         Map<String, DecisionStats> stats = new HashMap<>();
+        int totalDecisions = 0;
 
         for (GameMetadata game : games) {
             for (Player player : game.getPlayers()) {
-                for (Player.DecisionPoint decision : player.decisionHistory) {
+                for (DecisionPoint decision : player.decisionHistory) {
+                    totalDecisions++;
                     // Create context key for similar game situations
                     String context = createContextKey(decision);
 
@@ -65,26 +69,29 @@ public class MLDataCollector {
             }
         }
 
-        // Log optimal strategies for different contexts
         LOGGER.info("=== OPTIMAL DECISION ANALYSIS ===");
+        LOGGER.info("Total decisions analyzed: " + totalDecisions);
+
+        // Log optimal strategies for different contexts
         stats.entrySet().stream()
-                .filter(entry -> entry.getValue().getTotalDecisions() >= 10) // Only contexts with enough data
+                .filter(entry -> entry.getValue().getTotalDecisions() >= 20) // Only contexts with enough data
                 .sorted((a, b) -> Integer.compare(b.getValue().getTotalDecisions(),
                         a.getValue().getTotalDecisions()))
+                .limit(20) // Show top 20 most common situations
                 .forEach(entry -> {
                     LOGGER.info(String.format("Context: %s | %s",
                             entry.getKey(), entry.getValue().toString()));
                 });
     }
 
-    private static String createContextKey(Player.DecisionPoint decision) {
+    private static String createContextKey(DecisionPoint decision) {
         // Group similar game situations together
         String gamePhase;
         if (!decision.isPlayerOpen) {
             gamePhase = "opening";
-        } else if (decision.currentScore < 5000) {
+        } else if (decision.currentScore < 3000) {
             gamePhase = "early";
-        } else if (decision.currentScore < 8000) {
+        } else if (decision.currentScore < 7000) {
             gamePhase = "mid";
         } else {
             gamePhase = "late";
@@ -129,7 +136,7 @@ public class MLDataCollector {
 
         for (GameMetadata game : games) {
             for (Player player : game.getPlayers()) {
-                for (Player.DecisionPoint decision : player.decisionHistory) {
+                for (DecisionPoint decision : player.decisionHistory) {
                     if (decision.remainingDice == diceCount) {
                         stats.addDecision(decision.decidedToHold, decision.actualOutcome);
                     }
@@ -137,7 +144,7 @@ public class MLDataCollector {
             }
         }
 
-        if (stats.getTotalDecisions() > 0) {
+        if (stats.getTotalDecisions() > 10) {
             LOGGER.info(String.format("With %d dice remaining: %s", diceCount, stats.toString()));
         }
     }
@@ -147,7 +154,7 @@ public class MLDataCollector {
 
         for (GameMetadata game : games) {
             for (Player player : game.getPlayers()) {
-                for (Player.DecisionPoint decision : player.decisionHistory) {
+                for (DecisionPoint decision : player.decisionHistory) {
                     String phase;
                     if (!decision.isPlayerOpen) {
                         phase = "Opening";
@@ -166,7 +173,9 @@ public class MLDataCollector {
         }
 
         phaseStats.forEach((phase, stats) -> {
-            LOGGER.info(String.format("%s: %s", phase, stats.toString()));
+            if (stats.getTotalDecisions() > 10) {
+                LOGGER.info(String.format("%s: %s", phase, stats.toString()));
+            }
         });
     }
 }

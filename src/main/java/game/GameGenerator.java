@@ -1,10 +1,11 @@
 package game;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import model.DecisionPoint;
 import model.GameMetadata;
 import player.Player;
 import player.PlayerType;
@@ -16,7 +17,7 @@ public class GameGenerator {
 
   private static final List<GameMetadata> listOfGamesPlayed = new ArrayList<>();
 
-  private static final int gamesPlayed = 10000; // Increased for ML training
+  private static final int gamesPlayed = 100; // Increased for ML training
 
   public static void main(String[] args) {
     LOGGER.info("Starting Farkle simulation with " + gamesPlayed + " games");
@@ -210,7 +211,7 @@ public class GameGenerator {
       if (won) wins++;
 
       // Analyze decision patterns
-      for (Player.DecisionPoint decision : player.decisionHistory) {
+      for (DecisionPoint decision : player.decisionHistory) {
         totalDecisions++;
         totalExpectedValue += decision.expectedValue;
 
@@ -289,7 +290,7 @@ public class GameGenerator {
 
         String experimentName = String.format("RollThreshold_%d_DiceThreshold_%d",
                 rollThreshold, diceThreshold);
-        runStrategyExperiment(experimentName, testPlayers, 100000);
+        runStrategyExperiment(experimentName, testPlayers, 1000);
       }
     }
   }
