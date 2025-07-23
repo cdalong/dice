@@ -18,4 +18,19 @@ public class GameMetadata {
   PlayerType winningPlayerType;
 
   int winningPlayerAverageRollScore;
+
+  int highestTurnScore;
+
+  // Additional statistics for analysis
+  @Builder.Default
+  int totalStealAttempts = 0;
+
+  @Builder.Default
+  int successfulSteals = 0;
+
+  @Builder.Default
+  int totalBusts = 0;
+
+  @Builder.Default
+  int totalHotDiceRolls = 0;
 }

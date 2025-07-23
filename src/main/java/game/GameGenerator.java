@@ -10,6 +10,7 @@ import model.GameMetadata;
 import player.Player;
 import player.PlayerType;
 
+
 public class GameGenerator {
 
   private static final org.apache.log4j.Logger LOGGER =
@@ -17,7 +18,7 @@ public class GameGenerator {
 
   private static final List<GameMetadata> listOfGamesPlayed = new ArrayList<>();
 
-  private static final int gamesPlayed = 100; // Increased for ML training
+  private static final int gamesPlayed = 10000; // Increased for ML training
 
   public static void main(String[] args) {
     LOGGER.info("Starting Farkle simulation with " + gamesPlayed + " games");
@@ -116,6 +117,9 @@ public class GameGenerator {
     int totalTurns = 0;
     int shortestGame = Integer.MAX_VALUE;
     int longestGame = 0;
+    int highestGameScore = 0;
+    int totalStealAttempts = 0;
+    int successfulSteals = 0;
 
     // Player performance metrics
     Map<String, PlayerStats> playerStats = new HashMap<>();
@@ -124,6 +128,9 @@ public class GameGenerator {
       totalTurns += game.getTotalTurns();
       shortestGame = Math.min(shortestGame, game.getTotalTurns());
       longestGame = Math.max(longestGame, game.getTotalTurns());
+      highestGameScore = Math.max(highestGameScore, game.getHighestTurnScore());
+      totalStealAttempts += game.getTotalStealAttempts();
+      successfulSteals += game.getSuccessfulSteals();
 
       for (Player player : game.getPlayers()) {
         PlayerStats stats = playerStats.computeIfAbsent(player.name, k -> new PlayerStats());
@@ -132,9 +139,13 @@ public class GameGenerator {
     }
 
     double averageTurns = (double) totalTurns / gameMetadata.size();
+    double stealSuccessRate = totalStealAttempts > 0 ? (double) successfulSteals / totalStealAttempts * 100 : 0;
+
     LOGGER.info(String.format("Average game length: %.1f turns", averageTurns));
     LOGGER.info(String.format("Shortest game: %d turns", shortestGame));
     LOGGER.info(String.format("Longest game: %d turns", longestGame));
+    LOGGER.info(String.format("Highest single turn score: %d points", highestGameScore));
+    LOGGER.info(String.format("Steal attempts: %d (%.1f%% success rate)", totalStealAttempts, stealSuccessRate));
 
     // Player statistics
     LOGGER.info("=== PLAYER PERFORMANCE ===");
@@ -172,6 +183,9 @@ public class GameGenerator {
     private int totalBusts = 0;
     private int totalMultiples = 0;
     private int totalStraights = 0;
+    private int totalStealAttempts = 0;
+    private int successfulSteals = 0;
+    private int highestTurnScore = 0;
 
     public void addGame(Player player, boolean won) {
       gamesPlayed++;
@@ -181,6 +195,9 @@ public class GameGenerator {
       totalBusts += player.timesBusted;
       totalMultiples += player.multiplesRolled;
       totalStraights += player.straightsRolled;
+      totalStealAttempts += player.stealAttempts;
+      successfulSteals += player.successfulSteals;
+      highestTurnScore = Math.max(highestTurnScore, player.highestSingleTurn);
     }
 
     @Override
@@ -191,10 +208,13 @@ public class GameGenerator {
       double bustRate = (double) totalBusts / totalTurns * 100;
       double avgMultiples = (double) totalMultiples / gamesPlayed;
       double avgStraights = (double) totalStraights / gamesPlayed;
+      double stealSuccessRate = totalStealAttempts > 0 ? (double) successfulSteals / totalStealAttempts * 100 : 0;
 
       return String.format("%.1f%% wins, %.0f avg score, %.1f avg turns, " +
-                      "%.1f%% bust rate, %.2f multiples/game, %.2f straights/game",
-              winRate, avgScore, avgTurns, bustRate, avgMultiples, avgStraights);
+                      "%.1f%% bust rate, %.2f multiples/game, %.2f straights/game, " +
+                      "%d steal attempts (%.1f%% success), highest turn: %d",
+              winRate, avgScore, avgTurns, bustRate, avgMultiples, avgStraights,
+              totalStealAttempts, stealSuccessRate, highestTurnScore);
     }
   }
 

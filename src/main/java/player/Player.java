@@ -4,14 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import lombok.Data;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
 import model.DecisionPoint;
 import model.RollContext;
 
-@Data
 public class Player {
 
   public PlayerType.PLAYER_TYPE playerType;
@@ -30,12 +27,15 @@ public class Player {
   // ML Training Data
   public List<DecisionPoint> decisionHistory = new ArrayList<>();
 
-  // Performance metrics for ML
+  // Enhanced performance metrics for ML
   public int totalPointsFromHolding = 0;
   public int totalPointsFromContinuing = 0;
   public int timesHeldAndSucceeded = 0;
   public int timesContinuedAndBusted = 0;
   public int timesContinuedAndSucceeded = 0;
+  public int stealAttempts = 0;
+  public int successfulSteals = 0;
+  public int highestSingleTurn = 0;
 
   // Situational statistics
   public Map<String, Integer> decisionsByGameState = new HashMap<>();
@@ -190,6 +190,10 @@ public class Player {
       totalPointsFromHolding += outcome;
       if (outcome > 0) {
         timesHeldAndSucceeded++;
+        // Track highest single turn
+        if (outcome > highestSingleTurn) {
+          highestSingleTurn = outcome;
+        }
       }
     } else {
       totalPointsFromContinuing += outcome;
@@ -249,7 +253,12 @@ public class Player {
   public boolean shouldHold(int pendingScore, int remainingDice, int opponentScore) {
     // This is where the current AI strategy is implemented
     if (!this.isOpen) {
-      // Must keep rolling until open
+      // Must keep rolling until open (this shouldn't be called for unopened players)
+      return false;
+    }
+
+    // Never "hold" with 0 dice remaining - that's automatic continuation
+    if (remainingDice == 0) {
       return false;
     }
 
@@ -263,8 +272,21 @@ public class Player {
       return true;
     }
 
+    if (pendingScore >= this.rollThreshold) {
       // Have enough points to be satisfied
-      return pendingScore >= this.rollThreshold;
+      return true;
+    }
+
+    // Additional logic for aggressive vs safe players
+    if (this.playerType == PlayerType.PLAYER_TYPE.AGGRESSIVE) {
+      // Aggressive players take more risks
+      double expectedValue = calculateExpectedValue(remainingDice, pendingScore);
+      return expectedValue <= pendingScore * 0.5; // More willing to risk
+    } else {
+      // Safe players are more conservative
+      double expectedValue = calculateExpectedValue(remainingDice, pendingScore);
+      return expectedValue <= pendingScore * 0.8; // Less willing to risk
+    }
   }
 
   public void incrementTurn() {
@@ -275,8 +297,55 @@ public class Player {
     this.timesBusted += 1;
   }
 
+  public boolean isOpen() {
+    return isOpen;
+  }
+
+  public void setOpen(boolean open) {
+    isOpen = open;
+  }
+
+  public int getRollThreshold() {
+    return rollThreshold;
+  }
+
+  public void setRollThreshold(int rollThreshold) {
+    this.rollThreshold = rollThreshold;
+  }
+
+  public int getRemainingDiceThreshold() {
+    return remainingDiceThreshold;
+  }
+
+  public void setRemainingDiceThreshold(int remainingDiceThreshold) {
+    this.remainingDiceThreshold = remainingDiceThreshold;
+  }
+
+  public int getScore() {
+    return score;
+  }
+
+  public void setScore(int score) {
+    this.score = score;
+  }
+
+  public PlayerType.PLAYER_TYPE getPlayerType() {
+    return playerType;
+  }
+
+  public void setPlayerType(PlayerType.PLAYER_TYPE playerType) {
+    this.playerType = playerType;
+  }
+
   public int calculateAverageTurnScore() {
     return turnNumber > 0 ? score / turnNumber : 0;
   }
 
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
 }

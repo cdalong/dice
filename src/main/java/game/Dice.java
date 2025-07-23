@@ -5,6 +5,7 @@ import java.util.List;
 import model.GameMetadata;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import player.Player;
+import player.PlayerType;
 
 public class Dice {
 
@@ -15,6 +16,7 @@ public class Dice {
           org.apache.log4j.Logger.getLogger(Dice.class.getName());
 
   GameMetadata metadata;
+  private int highestTurnScore = 0;
 
   public Dice(List<Player> players) {
     this.players = players;
@@ -59,8 +61,7 @@ public class Dice {
         currentPlayer.incrementTimesBusted();
 
         // Record the bust decision (they had no choice)
-          assert opponent != null;
-          currentPlayer.recordDecision(0, activeDice, false, 0,
+        currentPlayer.recordDecision(0, activeDice, false, 0,
                 opponent.score, currentRoll);
 
         nextTurn();
@@ -73,16 +74,21 @@ public class Dice {
         while (runningScore + gameState.left < 1000) {
           runningScore += gameState.left;
 
-          // Record decision to continue (forced)
-          currentPlayer.recordDecision(runningScore, gameState.right, false,
-                  gameState.left, opponent.score, currentRoll);
-
-          if (gameState.right == 0) {
-            // Used all dice, get 6 back
-            gameState = new ImmutablePair<>(gameState.left, 6);
+          // Only record decision if player has a choice (not forced to continue)
+          if (gameState.right > 0) {
+            currentPlayer.recordDecision(runningScore, gameState.right, false,
+                    gameState.left, opponent.score, currentRoll);
           }
 
-          currentRoll = currentPlayer.roll(gameState.right);
+          if (gameState.right == 0) {
+            // Used all dice, automatically get 6 back (hot dice)
+            LOGGER.info(String.format("Player %s used all dice, continuing with 6", currentPlayer.name));
+            activeDice = 6;
+          } else {
+            activeDice = gameState.right;
+          }
+
+          currentRoll = currentPlayer.roll(activeDice);
           gameState = currentPlayer.decideScore(currentRoll);
 
           if (gameState.left == 0) {
@@ -91,7 +97,7 @@ public class Dice {
             currentPlayer.incrementTimesBusted();
 
             // Record the bust
-            currentPlayer.recordDecision(runningScore, gameState.right, false,
+            currentPlayer.recordDecision(runningScore, activeDice, false,
                     -runningScore, opponent.score, currentRoll);
 
             nextTurn();
@@ -102,13 +108,14 @@ public class Dice {
 
         if (runningScore + gameState.left >= 1000) {
           // Successfully opened
+          runningScore += gameState.left;
           LOGGER.info(String.format("Player %s has opened with %s",
-                  currentPlayer.name, runningScore + gameState.left));
+                  currentPlayer.name, runningScore));
           currentPlayer.isOpen = true;
 
           // Record the opening decision (forced to hold)
-          currentPlayer.recordDecision(runningScore + gameState.left, gameState.right,
-                  true, runningScore + gameState.left,
+          currentPlayer.recordDecision(runningScore, gameState.right,
+                  true, runningScore,
                   opponent.score, currentRoll);
 
           nextTurn();
@@ -175,16 +182,25 @@ public class Dice {
             }
           } else {
             // Player decides to continue rolling
-            // Record the decision to continue
-            currentPlayer.recordDecision(runningScore, gameState.right, false,
-                    gameState.left, opponent.score, currentRoll);
-
-            if (gameState.right == 0) {
-              // Used all dice, get 6 back
-              gameState = new ImmutablePair<>(0, 6);
+            // Record the decision to continue (only if they have remaining dice)
+            if (gameState.right > 0) {
+              currentPlayer.recordDecision(runningScore, gameState.right, false,
+                      gameState.left, opponent.score, currentRoll);
             }
 
-            currentRoll = currentPlayer.roll(gameState.right);
+            if (gameState.right == 0) {
+              // Used all dice, automatically get 6 back (hot dice)
+              // KEEP the running score - don't reset it!
+              LOGGER.info(String.format("Player %s used all dice (hot dice), continuing with 6 dice and %d points",
+                      currentPlayer.name, runningScore));
+              activeDice = 6;
+              // Don't record a decision here - it's automatic
+              // runningScore stays the same - points accumulate!
+            } else {
+              activeDice = gameState.right;
+            }
+
+            currentRoll = currentPlayer.roll(activeDice);
             gameState = currentPlayer.decideScore(currentRoll);
 
             if (gameState.left == 0) {
@@ -193,7 +209,7 @@ public class Dice {
               currentPlayer.incrementTimesBusted();
 
               // Record the bust decision
-              currentPlayer.recordDecision(runningScore, gameState.right, false,
+              currentPlayer.recordDecision(runningScore, activeDice, false,
                       -runningScore, opponent.score, currentRoll);
 
               nextTurn();
@@ -204,5 +220,110 @@ public class Dice {
         }
       }
     }
+  }
+
+  // Check if opponent wants to attempt to steal the turn
+  private boolean checkOpponentSteal(Player opponent, Player currentPlayer, int heldScore) {
+    // Simple AI decision: steal if held score is high enough and we're behind
+    if (!opponent.isOpen) {
+      return false; // Can't steal if not opened
+    }
+
+    int scoreGap = currentPlayer.score - opponent.score;
+
+    // More likely to steal if:
+    // 1. We're behind
+    // 2. The held score is substantial (>= 300 points)
+    // 3. Opponent's strategy (aggressive players more likely to steal)
+
+    if (heldScore < 300) {
+      return false; // Not worth the risk
+    }
+
+    if (scoreGap <= 0) {
+      return false; // We're not behind
+    }
+
+    // Aggressive players more likely to steal
+    if (opponent.playerType == PlayerType.PLAYER_TYPE.AGGRESSIVE) {
+      return heldScore >= 400 && scoreGap > 1000;
+    } else {
+      return heldScore >= 600 && scoreGap > 2000;
+    }
+  }
+
+  // Attempt to steal the opponent's held turn
+  private int attemptSteal(Player stealingPlayer, Player originalPlayer, int targetScore, int turnCounter) {
+    LOGGER.info(String.format("Player %s attempts to steal %d points from %s",
+            stealingPlayer.name, targetScore, originalPlayer.name));
+
+    int stealRunningScore = 0;
+    int stealActiveDice = 6;
+    boolean stealContinue = true;
+
+    while (stealContinue && stealRunningScore < targetScore) {
+      List<Integer> stealRoll = stealingPlayer.roll(stealActiveDice);
+      ImmutablePair<Integer, Integer> stealResult = stealingPlayer.decideScore(stealRoll);
+
+      if (stealResult.left == 0) {
+        // Busted the steal attempt
+        LOGGER.info(String.format("Player %s busted steal attempt", stealingPlayer.name));
+        stealingPlayer.incrementTimesBusted();
+
+        // Record the failed steal
+        stealingPlayer.recordDecision(stealRunningScore, stealActiveDice, false,
+                -stealRunningScore, originalPlayer.score, stealRoll);
+        return 0; // Failed steal
+      }
+
+      stealRunningScore += stealResult.left;
+
+      if (stealRunningScore > targetScore) {
+        // Successfully beat the target score
+        LOGGER.info(String.format("Player %s successfully stole with %d points (target was %d)",
+                stealingPlayer.name, stealRunningScore, targetScore));
+
+        // Track highest turn score
+        if (stealRunningScore > highestTurnScore) {
+          highestTurnScore = stealRunningScore;
+          LOGGER.info(String.format("New highest turn score: %d by %s (steal attempt)",
+                  highestTurnScore, stealingPlayer.name));
+        }
+
+        // Record successful steal decision
+        stealingPlayer.recordDecision(stealRunningScore, stealResult.right, true,
+                stealRunningScore, originalPlayer.score, stealRoll);
+        return stealRunningScore;
+      }
+
+      // Decide whether to continue the steal attempt
+      boolean shouldContinueSteal = stealingPlayer.shouldHold(stealRunningScore, stealResult.right, originalPlayer.score);
+
+      if (shouldContinueSteal) {
+        // Give up on steal - not enough points
+        LOGGER.info(String.format("Player %s gave up steal attempt with %d points (needed %d)",
+                stealingPlayer.name, stealRunningScore, targetScore + 1));
+
+        // Record decision to stop stealing
+        stealingPlayer.recordDecision(stealRunningScore, stealResult.right, true,
+                0, originalPlayer.score, stealRoll); // 0 because steal failed
+        return 0; // Failed to beat target
+      }
+
+      // Continue stealing
+      stealingPlayer.recordDecision(stealRunningScore, stealResult.right, false,
+              stealResult.left, originalPlayer.score, stealRoll);
+
+      if (stealResult.right == 0) {
+        // Hot dice in steal attempt
+        LOGGER.info(String.format("Player %s got hot dice during steal, continuing with %d points",
+                stealingPlayer.name, stealRunningScore));
+        stealActiveDice = 6;
+      } else {
+        stealActiveDice = stealResult.right;
+      }
+    }
+
+    return 0; // Should not reach here
   }
 }
