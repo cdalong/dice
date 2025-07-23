@@ -1,4 +1,13 @@
-Dice.class
-PlayerType$PLAYER_TYPE.class
-Player.class
-PlayerType.class
+game/Dice.class
+game/GameGenerator.class
+model/DecisionPoint.class
+game/MLDataCollector.class
+player/Player.class
+player/PlayerType$PLAYER_TYPE.class
+game/GameGenerator$StrategyStats.class
+game/GameGenerator$PlayerStats.class
+game/DecisionStats.class
+model/GameMetadata.class
+player/PlayerType.class
+model/GameMetadata$GameMetadataBuilder.class
+model/RollContext.class

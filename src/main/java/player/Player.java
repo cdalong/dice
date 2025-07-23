@@ -3,8 +3,11 @@ package player;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
+import model.DecisionPoint;
+import model.RollContext;
 
 public class Player {
 
@@ -16,14 +19,30 @@ public class Player {
   public String name;
   private static final Logger LOGGER = Logger.getLogger(Player.class.getName());
   public int multiplesRolled;
-
   public int straightsRolled;
-
   public int averageRollScore;
-
   public int turnNumber = 0;
-
   public int timesBusted = 0;
+
+  // ML Training Data
+  public List<DecisionPoint> decisionHistory = new ArrayList<>();
+
+  // Enhanced performance metrics for ML
+  public int totalPointsFromHolding = 0;
+  public int totalPointsFromContinuing = 0;
+  public int timesHeldAndSucceeded = 0;
+  public int timesContinuedAndBusted = 0;
+  public int timesContinuedAndSucceeded = 0;
+  public int stealAttempts = 0;
+  public int successfulSteals = 0;
+  public int highestSingleTurn = 0;
+
+  // Situational statistics
+  public Map<String, Integer> decisionsByGameState = new HashMap<>();
+  public Map<Integer, List<Integer>> scoreByRemainingDice = new HashMap<>();
+
+  // Cache for bust probability calculations
+  private static final Map<Integer, Double> BUST_PROBABILITY_CACHE = new HashMap<>();
 
   public Player(PlayerType.PLAYER_TYPE playerType, int rollThreshold, int remainingDiceThreshold) {
     this.playerType = playerType;
@@ -50,8 +69,8 @@ public class Player {
     }
 
     LOGGER.info(
-        String.format(
-            "Player %s has hit a straight on turn number %s", this.getName(), this.turnNumber));
+            String.format(
+                    "Player %s has hit a straight on turn number %s", this.getName(), this.turnNumber));
     straightsRolled += 1;
     return true;
   }
@@ -72,7 +91,6 @@ public class Player {
   }
 
   public ImmutablePair<Integer, Integer> decideScore(List<Integer> rolledDice) {
-
     // based on player type
     // need to decide how many of each number
     // or if it's a straight
@@ -103,10 +121,10 @@ public class Player {
           }
           activeDice -= curDiceVal;
           LOGGER.info(
-              String.format("Player %s rolled a Multiple Of: %s", this.getName(), diceRoll));
-          multiplesRolled += 1;
+                  String.format("Player %s rolled a Multiple Of: %s", this.getName(), diceRoll));
+          multiplesRolled += 1; // Only increment once per multiple type
         }
-        if (curDiceVal >= 3 && diceRoll == 1) {
+        else if (curDiceVal >= 3) {
           if (curDiceVal == 3) {
             currentPendingScore += diceRoll * 1000;
           } else {
@@ -114,12 +132,12 @@ public class Player {
           }
           activeDice -= curDiceVal;
           LOGGER.info(
-              String.format("Player %s rolled a Multiple Of: %s", this.getName(), curDiceVal));
-          multiplesRolled += 1;
+                  String.format("Player %s rolled a Multiple Of %d ones", this.getName(), curDiceVal));
+          multiplesRolled += 1; // Only increment once per multiple type
         } else if (diceRoll == 1) {
           currentPendingScore += curDiceVal * 100;
           activeDice -= curDiceVal;
-        } else if (diceRoll == 5 && curDiceVal <= 2) {
+        } else if (diceRoll == 5) {
           currentPendingScore += curDiceVal * 50;
           activeDice -= curDiceVal;
         }
@@ -133,6 +151,142 @@ public class Player {
       activeDice = 6;
     }
     return new ImmutablePair<>(currentPendingScore, activeDice);
+  }
+
+  // ML Decision Recording Methods
+  public void recordDecision(int pendingScore, int remainingDice,
+                             boolean decidedToHold, int outcome,
+                             int opponentScore, List<Integer> lastRoll) {
+    DecisionPoint decision = new DecisionPoint();
+
+    // Basic state
+    decision.currentScore = this.score;
+    decision.opponentScore = opponentScore;
+    decision.pendingScore = pendingScore;
+    decision.remainingDice = remainingDice;
+    decision.turnNumber = this.turnNumber;
+    decision.isPlayerOpen = this.isOpen;
+    decision.decidedToHold = decidedToHold;
+    decision.actualOutcome = outcome;
+
+    // Calculate probabilities and values
+    decision.bustProbability = calculateBustProbability(remainingDice);
+    decision.expectedValue = calculateExpectedValue(remainingDice, pendingScore);
+    decision.holdValue = pendingScore;
+
+    // Derived metrics
+    decision.scoreGap = this.score - opponentScore;
+    decision.pointsNeededToWin = 10000 - this.score;
+    decision.pointsNeededToOpen = this.isOpen ? 0 : Math.max(0, 1000 - this.score);
+
+    decisionHistory.add(decision);
+
+    // Update performance metrics
+    updatePerformanceMetrics(decidedToHold, outcome);
+  }
+
+  private void updatePerformanceMetrics(boolean decidedToHold, int outcome) {
+    if (decidedToHold) {
+      totalPointsFromHolding += outcome;
+      if (outcome > 0) {
+        timesHeldAndSucceeded++;
+        // Track highest single turn
+        if (outcome > highestSingleTurn) {
+          highestSingleTurn = outcome;
+        }
+      }
+    } else {
+      totalPointsFromContinuing += outcome;
+      if (outcome > 0) {
+        timesContinuedAndSucceeded++;
+      } else {
+        timesContinuedAndBusted++;
+      }
+    }
+  }
+
+  private double calculateBustProbability(int diceCount) {
+    return BUST_PROBABILITY_CACHE.computeIfAbsent(diceCount,
+            this::calculateBustProbabilityBySimulation);
+  }
+
+  private double calculateBustProbabilityBySimulation(int diceCount) {
+    if (diceCount <= 0) return 1.0;
+
+    int simulations = 10000;
+    int bustCount = 0;
+
+    for (int i = 0; i < simulations; i++) {
+      List<Integer> testRoll = roll(diceCount);
+      ImmutablePair<Integer, Integer> result = decideScore(testRoll);
+      if (result.left == 0) {
+        bustCount++;
+      }
+    }
+
+    return (double) bustCount / simulations;
+  }
+
+  private double calculateExpectedValue(int diceCount, int currentPending) {
+    if (diceCount <= 0) return 0.0;
+
+    int simulations = 5000; // Reduced for performance
+    double totalValue = 0;
+
+    for (int i = 0; i < simulations; i++) {
+      List<Integer> testRoll = roll(diceCount);
+      ImmutablePair<Integer, Integer> result = decideScore(testRoll);
+
+      if (result.left == 0) {
+        // Bust - lose all pending points from this turn
+        totalValue += -currentPending;
+      } else {
+        // Score - gain the points (simplified: assume we hold after this roll)
+        totalValue += result.left;
+      }
+    }
+
+    return totalValue / simulations;
+  }
+
+  // Method to determine if player should hold based on their strategy
+  public boolean shouldHold(int pendingScore, int remainingDice, int opponentScore) {
+    // This is where the current AI strategy is implemented
+    if (!this.isOpen) {
+      // Must keep rolling until open (this shouldn't be called for unopened players)
+      return false;
+    }
+
+    // Never "hold" with 0 dice remaining - that's automatic continuation
+    if (remainingDice == 0) {
+      return false;
+    }
+
+    if (remainingDice <= this.remainingDiceThreshold) {
+      // Too risky to continue
+      return true;
+    }
+
+    if (this.score > 8500) {
+      // Close to winning, be more conservative
+      return true;
+    }
+
+    if (pendingScore >= this.rollThreshold) {
+      // Have enough points to be satisfied
+      return true;
+    }
+
+    // Additional logic for aggressive vs safe players
+    if (this.playerType == PlayerType.PLAYER_TYPE.AGGRESSIVE) {
+      // Aggressive players take more risks
+      double expectedValue = calculateExpectedValue(remainingDice, pendingScore);
+      return expectedValue <= pendingScore * 0.5; // More willing to risk
+    } else {
+      // Safe players are more conservative
+      double expectedValue = calculateExpectedValue(remainingDice, pendingScore);
+      return expectedValue <= pendingScore * 0.8; // Less willing to risk
+    }
   }
 
   public void incrementTurn() {
@@ -184,7 +338,7 @@ public class Player {
   }
 
   public int calculateAverageTurnScore() {
-    return score / turnNumber;
+    return turnNumber > 0 ? score / turnNumber : 0;
   }
 
   public String getName() {

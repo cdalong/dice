@@ -1,3 +1,9 @@
-P:\dice\src\main\java\Player.java
-P:\dice\src\main\java\PlayerType.java
-P:\dice\src\main\java\Dice.java
+/Users/fisk/Documents/code/dice/src/main/java/game/DecisionStats.java
+/Users/fisk/Documents/code/dice/src/main/java/game/Dice.java
+/Users/fisk/Documents/code/dice/src/main/java/game/GameGenerator.java
+/Users/fisk/Documents/code/dice/src/main/java/game/MLDataCollector.java
+/Users/fisk/Documents/code/dice/src/main/java/model/DecisionPoint.java
+/Users/fisk/Documents/code/dice/src/main/java/model/GameMetadata.java
+/Users/fisk/Documents/code/dice/src/main/java/model/RollContext.java
+/Users/fisk/Documents/code/dice/src/main/java/player/Player.java
+/Users/fisk/Documents/code/dice/src/main/java/player/PlayerType.java
